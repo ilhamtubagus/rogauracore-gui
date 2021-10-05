@@ -34,6 +34,7 @@ function createWindow() {
   if (isDev) {
     win.webContents.openDevTools({ mode: "detach" });
   }
+
   if (!isDev) {
     win.removeMenu();
   }

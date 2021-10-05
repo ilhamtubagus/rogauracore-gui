@@ -14,6 +14,7 @@ import {
   Radio,
   Slider,
   Button,
+  Checkbox,
 } from "@mui/material";
 import MuiAlert from "@mui/material/Alert";
 import React from "react";
@@ -46,6 +47,7 @@ function App() {
   const [color2D] = useDebounce(color2, 200);
   const [color3D] = useDebounce(color3, 200);
   const [color4D] = useDebounce(color4, 200);
+  const [forceReload, setForceReload] = React.useState(false);
   let rogAuraExecPath = "";
   const [selectedColor, setSelectedColor] = React.useState(0);
   const handleChangeEffect = (event, newValue) => {
@@ -75,6 +77,10 @@ function App() {
       open: false,
       severity: "info",
     });
+  };
+
+  const handleChangeForceReload = (event) => {
+    setForceReload(event.target.checked);
   };
 
   const handleChangePicker = (newColor) => {
@@ -113,21 +119,23 @@ function App() {
       }
       rogAuraExecPath = join(appPath + "/bin/rogauracore");
     }
-    let execCmd = ``;
+    let auraCoreCmd = ``;
     // single section
     if (colorCount === 0) {
       switch (effect) {
         case "static":
-          execCmd = `${rogAuraExecPath} single_static ${color1D.substring(1)}`;
+          auraCoreCmd = `${rogAuraExecPath} single_static ${color1D.substring(
+            1
+          )}`;
           break;
         case "breathing":
-          execCmd = `${rogAuraExecPath} single_breathing ${color1D.substring(
+          auraCoreCmd = `${rogAuraExecPath} single_breathing ${color1D.substring(
             1
           )} ${color2D.substring(1)} ${speed}`;
 
           break;
         case "cycle":
-          execCmd = `${rogAuraExecPath} single_colorcycle ${speed}`;
+          auraCoreCmd = `${rogAuraExecPath} single_colorcycle ${speed}`;
           break;
         default:
           break;
@@ -136,14 +144,14 @@ function App() {
       // multiple section
       switch (effect) {
         case "static":
-          execCmd = `${rogAuraExecPath} multi_static ${color1D.substring(
+          auraCoreCmd = `${rogAuraExecPath} multi_static ${color1D.substring(
             1
           )} ${color2D.substring(1)} ${color3D.substring(
             1
           )} ${color4D.substring(1)}`;
           break;
         case "breathing":
-          execCmd = `${rogAuraExecPath} multi_breathing ${color1D.substring(
+          auraCoreCmd = `${rogAuraExecPath} multi_breathing ${color1D.substring(
             1
           )} ${color2D.substring(1)} ${color3D.substring(
             1
@@ -154,21 +162,13 @@ function App() {
           break;
       }
     }
-    console.log(
-      `pkexec sh -c "${rogAuraExecPath}  initialize_keyboard; echo '${brightness}' > /sys/class/leds/asus::kbd_backlight/brightness; ${execCmd}; systemctl restart upower.service"`
-    );
-    exec(
-      `pkexec sh -c "${rogAuraExecPath}  initialize_keyboard; echo '${brightness}' > /sys/class/leds/asus::kbd_backlight/brightness; ${execCmd}; systemctl restart upower.service"`,
-      (err, stdout, stderr) => {
-        handleClose();
-        if (err) {
-          handleOpenSnackbar(
-            "Oops snap!.. we couldn't apply ur settings",
-            "error"
-          );
-        }
-      }
-    );
+    let execCmd = `pkexec sh -c "${rogAuraExecPath}  initialize_keyboard; echo '${brightness}' > /sys/class/leds/asus::kbd_backlight/brightness; ${auraCoreCmd}"`;
+    if (forceReload) {
+      execCmd = `pkexec sh -c "${rogAuraExecPath}  initialize_keyboard; echo '${brightness}' > /sys/class/leds/asus::kbd_backlight/brightness; ${auraCoreCmd}; systemctl restart upower.service"`;
+    }
+    exec(execCmd, (err, stdout, stderr) => {
+      handleClose();
+    });
   };
 
   const renderColorSelection = () => {
@@ -327,7 +327,7 @@ function App() {
       sx={{
         bgcolor: "#ebeef3",
         display: "flex",
-        height: "575px",
+        height: "600px",
         padding: 5,
       }}
     >
@@ -436,10 +436,17 @@ function App() {
                   min={1}
                   max={3}
                   marks
-                  sx={{ marginBottom: 2 }}
+                  sx={{ marginBottom: 2, padding: 3 }}
                 />
               </React.Fragment>
             )}
+            <FormControlLabel
+              value={forceReload}
+              onChange={handleChangeForceReload}
+              control={<Checkbox name="forceReload" />}
+              label="Force Reload System Power"
+              sx={{ marginBottom: 2 }}
+            />
             <Button variant="contained" onClick={handleApplySettings}>
               Apply
             </Button>
